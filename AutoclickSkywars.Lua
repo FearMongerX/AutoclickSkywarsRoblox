@@ -1,7 +1,7 @@
 local p = game:GetService("Players").LocalPlayer
 local u = game:GetService("UserInputService")
 local v = game:GetService("VirtualInputManager")
-local s = 1/50 -- Tốc độ mặc định
+local s = 1/50 -- Tốc độ mặc định (sẽ không giới hạn CPS)
 local e = true
 local h = false
 local i = false
@@ -90,45 +90,52 @@ l.Text = "Already active"
 l.TextColor3 = Color3.fromRGB(255, 255, 255)
 l.TextScaled = true
 
--- Logic autoclick
+-- Logic autoclick không giới hạn CPS
 spawn(function()
-    while wait(s) do -- Sử dụng wait(s) ngay trong vòng lặp
+    local lastClick = tick()
+    while true do
         if not e then
             i = false
+            task.wait()
             continue
         end
-        pcall(function()
-            if p.Character then
-                local t = p.Character:FindFirstChildOfClass("Tool")
-                if t and t:FindFirstChild("Handle") then
-                    local n = t.Name:lower()
-                    local tip = t.ToolTip:lower()
-                    local isBow = n == "bow" -- Loại trừ bow
-                    if isBow then
-                        i = false
-                        return
-                    end
-
-                    local k = n:find("sword") or n:find("swords") or n:find("speed") or n:find("heal") or n:find("shield") or 
-                              tip:find("speed") or tip:find("heal") or tip:find("shield")
-                    if k then
-                        t:Activate()
-                        if not i then
-                            pcall(function()
-                                t.Activated:Fire()
-                                local r = t:FindFirstChildOfClass("RemoteEvent")
-                                if r then r:FireServer() end
-                            end)
-                            i = true
+        local currentTime = tick()
+        if (currentTime - lastClick) >= s then
+            pcall(function()
+                if p.Character then
+                    local t = p.Character:FindFirstChildOfClass("Tool")
+                    if t and t:FindFirstChild("Handle") then
+                        local n = t.Name:lower()
+                        local tip = t.ToolTip:lower()
+                        local isBow = n == "bow" -- Loại trừ bow
+                        if isBow then
+                            i = false
+                            return
                         end
-                    elseif z(u:GetMouseLocation()) then -- Autoclick cho block/pickaxe
-                        t:Activate()
-                    else
-                        i = false
+
+                        local k = n:find("sword") or n:find("swords") or n:find("speed") or n:find("heal") or n:find("shield") or 
+                                  tip:find("speed") or tip:find("heal") or tip:find("shield")
+                        if k then
+                            t:Activate()
+                            if not i then
+                                pcall(function()
+                                    t.Activated:Fire()
+                                    local r = t:FindFirstChildOfClass("RemoteEvent")
+                                    if r then r:FireServer() end
+                                end)
+                                i = true
+                            end
+                        elseif z(u:GetMouseLocation()) then -- Autoclick cho block/pickaxe
+                            t:Activate()
+                        else
+                            i = false
+                        end
                     end
                 end
-            end
-        end)
+            end)
+            lastClick = currentTime
+        end
+        task.wait() -- Độ trễ tối thiểu để không gây lag
     end
 end)
 
